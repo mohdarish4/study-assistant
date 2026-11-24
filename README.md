@@ -84,16 +84,16 @@ Tested on a 10-page PDF where each page covers a different topic. The table show
 
 | Question | Expected page | Correct? |
 |---|---|---|
-| Who created Python and when was it released? | 1 | |
-| What does HTTP status code 429 mean? | 2 | |
-| What is a token roughly equal to? | 3 | |
-| Which embedding model does this project use? | 4 | |
-| What is FAISS? | 5 | |
-| What chunk size and overlap are used? | 6 | |
-| How many chunks does the retriever return? | 7 | |
-| What is chain-of-thought prompting? | 8 | |
-| What is ReAct? | 9 | |
-| Where can AI demos be hosted for free? | 10 | |
+| Who created Python and when was it released? | 1 | ✅ |
+| What does HTTP status code 429 mean? | 2 | ✅ |
+| What is a token roughly equal to? | 3 | ✅ |
+| Which embedding model does this project use? | 4 | ✅ |
+| What is FAISS? | 5 | ✅ |
+| What chunk size and overlap are used? | 6 | ✅ |
+| How many chunks does the retriever return? | 7 | ✅ |
+| What is chain-of-thought prompting? | 8 | ✅ |
+| What is ReAct? | 9 | ✅ |
+| Where can AI demos be hosted for free? | 10 | ✅ |
 
 Out-of-document questions (for example "Who is the prime minister of India?") correctly return "I could not find this in your documents."
 
