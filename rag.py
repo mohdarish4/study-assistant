@@ -8,7 +8,7 @@ from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_groq import ChatGroq
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -16,7 +16,9 @@ load_dotenv()
 
 DATA_DIR = Path("data")
 DB_DIR = "chroma_db"
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq").lower()  # "groq" or "gemini"
 GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")  # set GROQ_MODEL in .env to override
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")  # set GEMINI_MODEL in .env to override
 BATCH_SIZE = 50  # small batches keep us inside free-tier rate limits
 HISTORY_TURNS = 6  # how many recent messages the model remembers
 NOT_FOUND = "I could not find this in your documents."
@@ -29,7 +31,10 @@ def get_db() -> Chroma:
     return Chroma(persist_directory=DB_DIR, embedding_function=embeddings)
 
 
-def get_llm() -> ChatGroq:
+def get_llm():
+    """Chat model. Set LLM_PROVIDER=gemini in .env if Groq is blocked on your network."""
+    if LLM_PROVIDER == "gemini":
+        return ChatGoogleGenerativeAI(model=GEMINI_MODEL, temperature=0)
     return ChatGroq(model=GROQ_MODEL, temperature=0)
 
 
