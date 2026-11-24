@@ -1,28 +1,27 @@
-"""Stage 2: Streamlit UI with PDF upload, auto-indexing, chat memory, streaming, and sources."""
+"""Stage 3: Streamlit UI with an agent that chooses between your documents and web search."""
 import os
 from pathlib import Path
 
 import streamlit as st
 
+from agent import build_agent, collect_sources, run_agent, web_search_available
 from rag import (
     DATA_DIR,
-    format_sources,
+    LLM_PROVIDER,
     get_db,
     get_llm,
     indexed_sources,
     ingest_pdf,
     pending_pdfs,
-    retrieve,
-    standalone_question,
-    stream_answer,
 )
 
 st.set_page_config(page_title="Study Assistant", page_icon="📚")
 st.title("📚 Study Assistant")
-st.caption("Ask questions about your PDFs. Answers come only from your documents, with sources.")
+st.caption("An agent that answers from your PDFs first, and searches the web only when needed.")
 
 # Stop early with a clear message if API keys are missing
-missing = [k for k in ("GOOGLE_API_KEY", "GROQ_API_KEY") if not os.getenv(k)]
+required_keys = ["GOOGLE_API_KEY"] + (["GROQ_API_KEY"] if LLM_PROVIDER == "groq" else [])
+missing = [k for k in required_keys if not os.getenv(k)]
 if missing:
     st.error(f"Missing in your .env file: {', '.join(missing)}")
     st.stop()
@@ -38,13 +37,18 @@ def load_llm():
     return get_llm()
 
 
+@st.cache_resource
+def load_agent(_db, _llm, use_web: bool):
+    return build_agent(_db, _llm, use_web)
+
+
 db = load_db()
 llm = load_llm()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ---------- sidebar: upload and index documents ----------
+# ---------- sidebar ----------
 with st.sidebar:
     st.header("Documents")
     uploads = st.file_uploader("Upload PDFs", type="pdf", accept_multiple_files=True)
@@ -76,9 +80,18 @@ with st.sidebar:
     else:
         st.write("Nothing yet.")
 
+    st.subheader("Agent")
+    if web_search_available():
+        use_web = st.toggle("Allow web search", value=True)
+    else:
+        use_web = False
+        st.caption("Web search is off. Add TAVILY_API_KEY to your .env file to enable it.")
+
     if st.button("Clear chat"):
         st.session_state.messages = []
         st.rerun()
+
+agent = load_agent(db, llm, use_web)
 
 # ---------- chat ----------
 for m in st.session_state.messages:
@@ -101,17 +114,24 @@ if question:
         st.markdown(question)
 
     with st.chat_message("assistant"):
+        answer, new_messages = "", []
         try:
-            search_query = standalone_question(llm, history, question)
-            docs = retrieve(db, search_query)
-            answer = st.write_stream(stream_answer(llm, docs, history, question))
+            with st.status("Thinking ...", expanded=True) as status:
+                for event in run_agent(agent, history, question):
+                    if event[0] == "step":
+                        st.write(event[1])
+                    else:
+                        _, answer, new_messages = event
+                status.update(label="Done", state="complete", expanded=False)
         except Exception as e:
             st.error(f"Something went wrong: {e}")
             st.stop()
 
-        # Show sources only when the answer actually came from the documents
-        found = "could not find" not in answer.lower()
-        sources = format_sources(docs) if found else []
+        if not answer:
+            answer = "Sorry, I could not produce an answer. Please try again."
+        st.markdown(answer)
+
+        sources = collect_sources(answer, new_messages)
         if sources:
             with st.expander("Sources"):
                 for s in sources:
