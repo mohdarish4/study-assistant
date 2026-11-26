@@ -101,7 +101,7 @@ Out-of-document questions (for example "Who is the prime minister of India?") co
 
 - [x] Stage 1: RAG pipeline with ingestion, retrieval, and citations
 - [x] Stage 2: Streamlit UI, PDF upload, auto-indexing, and chat memory
-- [ ] Stage 3: LangGraph agent that chooses between your documents and web search
+- [x] Stage 3: LangGraph agent that chooses between your documents and web search
 - [ ] Deploy a live demo
 
 ## Notes
